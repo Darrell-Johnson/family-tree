@@ -1,0 +1,136 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0f0c08;
+  --surface:   #1a1510;
+  --card:      #231d16;
+  --border:    #3a3020;
+  --gold:      #c8973a;
+  --gold-lt:   #e8b85a;
+  --cream:     #f0e8d8;
+  --muted:     #8a7a60;
+  --ida:       #d4608a;
+  --benford:   #c8973a;
+  --penny:     #7a6ab0;
+  --johnson:   #6a9e72;
+  --luvenia:   #b05a3a;
+  --burlie:    #3a8a9a;
+  --moses:     #9a7a3a;
+  --hagar:     #5a7a9a;
+  --israel:    #7a5a9a;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--cream);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── TYPOGRAPHY ── */
+h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; line-height: 1.15; }
+
+/* ── FORM ELEMENTS ── */
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--cream);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  width: 100%;
+  transition: border-color 0.2s;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--muted);
+}
+select option {
+  background: var(--surface);
+  color: var(--cream);
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  letter-spacing: 0.3px;
+}
+.btn-gold {
+  background: var(--gold);
+  color: var(--bg);
+}
+.btn-gold:hover { background: var(--gold-lt); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── CARD ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { background: var(--card); border-bottom: 2px solid var(--gold); }
+th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  white-space: nowrap;
+}
+td { padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--cream); }
+tbody tr:hover td { background: rgba(200,151,58,.04); }
+tbody tr:last-child td { border-bottom: none; }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ── AGE BAR ── */
+.age-bar {
+  display: inline-block;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 3px;
+  opacity: 0.6;
+  vertical-align: middle;
+}
