@@ -52,6 +52,26 @@ export function calculateAge(birthDate: string | null, deathDate: string | null)
   return age >= 0 ? age : null
 }
 
+// Nobody with a recorded birth date but no death date has plausibly stayed alive past this age —
+// treat them as deceased with an unrecorded death date rather than "Living" at 150+ years old.
+const MAX_PLAUSIBLE_LIVING_AGE = 110
+
+export type LifeStatus = 'living' | 'deceased' | 'unknown'
+
+export function getLifeStatus(birthDate: string | null, deathDate: string | null): LifeStatus {
+  if (deathDate) return 'deceased'
+  const currentAge = calculateAge(birthDate, null)
+  if (currentAge !== null && currentAge > MAX_PLAUSIBLE_LIVING_AGE) return 'unknown'
+  return 'living'
+}
+
+// Age to display for stored records: real age at death, current age if plausibly still living,
+// or null if the person has no death date recorded but can no longer plausibly be alive.
+export function getDisplayAge(birthDate: string | null, deathDate: string | null): number | null {
+  if (getLifeStatus(birthDate, deathDate) === 'unknown') return null
+  return calculateAge(birthDate, deathDate)
+}
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr + 'T00:00:00')

@@ -50,6 +50,39 @@ export function getAncestryPath(memberId: string, allMembers: Member[]): Member[
   return path
 }
 
+/** Find a member by exact first + last name */
+export function findMember<T extends Member>(members: T[], firstName: string, lastName: string): T | undefined {
+  return members.find(m => m.first_name === firstName && m.last_name === lastName)
+}
+
+/** Direct children of a member, sorted by birth date then name */
+export function getChildren<T extends Member>(parentId: string, members: T[]): T[] {
+  return members
+    .filter(m => m.parent_id === parentId)
+    .sort((a, b) => {
+      if (a.birth_date && b.birth_date) return a.birth_date.localeCompare(b.birth_date)
+      return (a.first_name + a.last_name).localeCompare(b.first_name + b.last_name)
+    })
+}
+
+/** All descendants of a member with depth (1 = child) and relation label */
+export function getDescendantsWithDepth<T extends Member>(
+  memberId: string,
+  members: T[]
+): { member: T; depth: number; relation: string }[] {
+  const result: { member: T; depth: number; relation: string }[] = []
+  function walk(id: string, depth: number) {
+    for (const child of getChildren(id, members)) {
+      const relation =
+        depth === 1 ? 'Child' : depth === 2 ? 'Grandchild' : depth === 3 ? 'Great-grandchild' : `Great×${depth - 2}-grandchild`
+      result.push({ member: child, depth, relation })
+      walk(child.id, depth + 1)
+    }
+  }
+  walk(memberId, 1)
+  return result
+}
+
 export const GENERATION_SUFFIXES: Record<number, string> = {
   1: 'child',
   2: 'grandchild',

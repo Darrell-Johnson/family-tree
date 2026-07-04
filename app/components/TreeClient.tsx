@@ -4,14 +4,22 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { supabase, Member, calculateAge, formatDate, FAMILY_LINES } from '../../lib/supabase'
-import { LINE_COLORS_MAP, getDescendants, getAncestryPath, GENERATION_SUFFIXES } from './treeUtils'
+import { supabase, Member, calculateAge, getDisplayAge, getLifeStatus, LifeStatus, formatDate, FAMILY_LINES } from '../../lib/supabase'
+import { LINE_COLORS_MAP, getDescendants, getAncestryPath, getChildren, GENERATION_SUFFIXES } from './treeUtils'
 import styles from './tree.module.css'
 
 const LineageTree = dynamic(() => import('./LineageTree'), { ssr: false })
+const IdaHubSection = dynamic(() => import('./IdaHubSection'), { ssr: false })
+const PennyBranchSection = dynamic(() => import('./PennyBranchSection'), { ssr: false })
+const JohnsonBranchSection = dynamic(() => import('./JohnsonBranchSection'), { ssr: false })
+const FullBenfordSection = dynamic(() => import('./FullBenfordSection'), { ssr: false })
 
 const TABS = [
   { id: 'overview',  label: '🌳 Overview' },
+  { id: 'idahub',    label: '★ Ida — The Hub' },
+  { id: 'penny',     label: '💜 Penny Branch' },
+  { id: 'johnson',   label: '🌿 Johnson Branch' },
+  { id: 'benford',   label: '🏛 Full Benford Family' },
   { id: 'lineage',   label: '🌿 Full Lineage' },
   { id: 'search',    label: '🔍 Search' },
   { id: 'directory', label: '📋 Directory' },
@@ -28,7 +36,7 @@ function NotConfiguredBanner() {
   )
 }
 
-type MemberWithAge = Member & { computedAge: number | null }
+type MemberWithAge = Member & { computedAge: number | null; lifeStatus: LifeStatus }
 
 export default function TreeClient() {
   const searchParams = useSearchParams()
@@ -65,7 +73,7 @@ export default function TreeClient() {
       const { data, error } = await supabase.from('members').select('*').order('birth_date', { ascending: true })
       if (error) { setDbError(true) }
       else if (data) {
-        setMembers((data as Member[]).map(m => ({ ...m, computedAge: calculateAge(m.birth_date, m.death_date) })))
+        setMembers((data as Member[]).map(m => ({ ...m, computedAge: getDisplayAge(m.birth_date, m.death_date), lifeStatus: getLifeStatus(m.birth_date, m.death_date) })))
       }
     } catch { setDbError(true) }
     setLoading(false)
@@ -198,6 +206,14 @@ export default function TreeClient() {
 
   const lineGroups = FAMILY_LINES.map(line => ({ line, count: members.filter(m=>m.family_line===line).length })).filter(g=>g.count>0)
 
+  // ── Ida hub computed data (for Overview) ──
+  const idaMember = members.find(m => m.is_hub)
+  const idaChildren = idaMember ? getChildren(idaMember.id, members) : []
+  const idaPennyKids = idaChildren.filter(m => m.family_line === 'Penny')
+  const idaJohnsonKids = idaChildren.filter(m => m.family_line === 'Johnson')
+  const miltonMember = members.find(m => m.first_name === 'Milton' && m.last_name === 'Benford')
+  const miltonSiblings = miltonMember ? getChildren(miltonMember.id, members).filter(m => !m.is_hub) : []
+
   return (
     <div className={styles.page}>
       {/* HEADER */}
@@ -247,8 +263,8 @@ export default function TreeClient() {
 
             <div className={styles.idaHero}>
               <div className={styles.idaLabel}>⭐ The Family Hub</div>
-              <h3 className={styles.idaName}>Ida B. Benford · Penny · Johnson</h3>
-              <div className={styles.idaDates}>1887 – 1961</div>
+              <h3 className={styles.idaName}>{idaMember ? `${idaMember.first_name} ${idaMember.last_name}` : 'Ida B. Benford · Penny · Johnson'}</h3>
+              <div className={styles.idaDates}>{idaMember ? `${formatDate(idaMember.birth_date)} – ${formatDate(idaMember.death_date)}` : '1887 – 1961'}</div>
               <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.7, maxWidth:520, margin:'0 auto' }}>
                 Born Benford, first married Penny, then married Johnson. She is the single person who connects all three family lines.
               </p>
@@ -256,12 +272,12 @@ export default function TreeClient() {
                 <div className={styles.marriagePill} style={{ borderColor:'rgba(122,106,176,.4)' }}>
                   <div style={{ fontSize:9, letterSpacing:2, textTransform:'uppercase', color:'#9a8acf', marginBottom:3 }}>1st Marriage</div>
                   <div style={{ fontWeight:600 }}>James Roma Penny</div>
-                  <div style={{ fontSize:11, color:'var(--muted)' }}>3 children · d. ~1913</div>
+                  <div style={{ fontSize:11, color:'var(--muted)' }}>{idaPennyKids.length} children · d. ~1913</div>
                 </div>
                 <div className={styles.marriagePill} style={{ borderColor:'rgba(106,158,114,.4)' }}>
                   <div style={{ fontSize:9, letterSpacing:2, textTransform:'uppercase', color:'#7abf82', marginBottom:3 }}>2nd Marriage</div>
                   <div style={{ fontWeight:600 }}>William Jenkins Johnson</div>
-                  <div style={{ fontSize:11, color:'var(--muted)' }}>7 children · 1883–1942</div>
+                  <div style={{ fontSize:11, color:'var(--muted)' }}>{idaJohnsonKids.length} children · 1883–1942</div>
                 </div>
               </div>
             </div>
@@ -302,6 +318,73 @@ export default function TreeClient() {
                 })}
               </div>
             )}
+
+            {miltonSiblings.length > 0 && (
+              <div className="card" style={{ padding:'18px 20px', marginTop:20 }}>
+                <div style={{ fontSize:11, letterSpacing:2, textTransform:'uppercase', color:'var(--muted)', marginBottom:10 }}>
+                  Other children of Milton Benford (siblings of Ida)
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                  {miltonSiblings.map(m => (
+                    <span key={m.id} className="badge" style={{ background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)' }}>
+                      {m.first_name} {m.last_name}{m.birth_date ? ` · ${new Date(m.birth_date).getFullYear()}` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════ IDA — THE HUB ══════════ */}
+        {activeTab==='idahub' && (
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.dot} style={{ background:'var(--ida)' }} />
+              <h2>★ Ida B. Benford — The Family Hub</h2>
+              <span className={styles.sectionMeta}>The person who connects all three lines</span>
+            </div>
+            {dbError && <NotConfiguredBanner />}
+            {loading ? <p style={{ color:'var(--muted)', textAlign:'center', padding:40 }}>Loading…</p> : <IdaHubSection members={members} />}
+          </div>
+        )}
+
+        {/* ══════════ PENNY BRANCH ══════════ */}
+        {activeTab==='penny' && (
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.dot} style={{ background:'#7a6ab0' }} />
+              <h2>The Penny Branch</h2>
+              <span className={styles.sectionMeta}>Ida B. Benford × James Roma Penny</span>
+            </div>
+            {dbError && <NotConfiguredBanner />}
+            {loading ? <p style={{ color:'var(--muted)', textAlign:'center', padding:40 }}>Loading…</p> : <PennyBranchSection members={members} />}
+          </div>
+        )}
+
+        {/* ══════════ JOHNSON BRANCH ══════════ */}
+        {activeTab==='johnson' && (
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.dot} style={{ background:'var(--johnson)' }} />
+              <h2>The Johnson Branch</h2>
+              <span className={styles.sectionMeta}>Ida B. Benford × William Jenkins Johnson · Richard Israel Johnson family</span>
+            </div>
+            {dbError && <NotConfiguredBanner />}
+            {loading ? <p style={{ color:'var(--muted)', textAlign:'center', padding:40 }}>Loading…</p> : <JohnsonBranchSection members={members} />}
+          </div>
+        )}
+
+        {/* ══════════ FULL BENFORD FAMILY ══════════ */}
+        {activeTab==='benford' && (
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.dot} style={{ background:'var(--benford)' }} />
+              <h2>Full Benford Family</h2>
+              <span className={styles.sectionMeta}>All children of Milton Benford & Melvenia Norseweather</span>
+            </div>
+            {dbError && <NotConfiguredBanner />}
+            {loading ? <p style={{ color:'var(--muted)', textAlign:'center', padding:40 }}>Loading…</p> : <FullBenfordSection members={members} />}
           </div>
         )}
 
@@ -505,7 +588,7 @@ export default function TreeClient() {
                           <td style={{ color:'var(--muted)' }}>{m.birth_name||'—'}</td>
                           <td><span className="badge" style={{ background:`${LINE_COLORS_MAP[m.family_line]}18`, color:LINE_COLORS_MAP[m.family_line] }}>{m.family_line}</span></td>
                           <td style={{ color:'var(--muted)' }}>{formatDate(m.birth_date)}</td>
-                          <td style={{ color:'var(--muted)' }}>{formatDate(m.death_date)}</td>
+                          <td style={{ color:'var(--muted)' }}>{m.lifeStatus==='unknown'?'Unknown':formatDate(m.death_date)}</td>
                           <td style={{ color:m.computedAge&&m.computedAge>99?'var(--gold)':'var(--cream)', fontWeight:m.computedAge&&m.computedAge>99?700:400 }}>
                             {m.computedAge!==null?`${m.computedAge} yrs`:'—'}
                           </td>
